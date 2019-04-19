@@ -151,6 +151,22 @@
   <ItemGroup>
     <Text Include="Readme.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="bomb.png" />
+    <Image Include="enemy.png" />
+    <Image Include="badder.png" />
+    <Image Include="missile.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="BackgroundUI.h" />
+    <ClInclude Include="Bomb.h" />
+    <ClInclude Include="Enemy.h" />
+    <ClInclude Include="ManyBombs.h" />
+    <ClInclude Include="ManyEnemies.h" />
+    <ClInclude Include="ManyMissiles.h" />
+    <ClInclude Include="Missile.h" />
+    <ClInclude Include="Ship.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

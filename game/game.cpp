@@ -1,122 +1,208 @@
-//=========================================================
-// This is just the starting point for your final project.
-// You are expected to modify and add classes/files as needed.
-// The code below is the original code for our first graphics
-// project (moving the little green ship). 
-//========================================================
 #include <iostream>
 using namespace std;
 #include <SFML/Graphics.hpp>
-using namespace sf; 
+#include <ctime>
+#include <cstdlib>
+using namespace sf;
+#include "BackgroundUI.h"
+#include "Enemy.h"
+#include "Missile.h"
+#include "Ship.h"
+#include "Bomb.h"
+#include "ManyBombs.h"
+#include "ManyMissiles.h"
+#include "ManyEnemies.h"
 
 //============================================================
-// YOUR HEADER WITH YOUR NAME GOES HERE. PLEASE DO NOT FORGET THIS
+// Keenan Lee
+// Final Programming Assignment: Game
+// 4/19/19
 //============================================================
-
-// note: a Sprite represents an image on screen. A sprite knows and remembers its own position
-// ship.move(offsetX, offsetY) adds offsetX, offsetY to 
-// the current position of the ship. 
-// x is horizontal, y is vertical. 
-// 0,0 is in the UPPER LEFT of the screen, y increases DOWN the screen
-void moveShip(Sprite& ship)
-{
-	const float DISTANCE = 5.0;
-
-	if (Keyboard::isKeyPressed(Keyboard::Left))
-	{
-		// left arrow is pressed: move our ship left 5 pixels
-		// 2nd parm is y direction. We don't want to move up/down, so it's zero.
-		ship.move(-DISTANCE, 0);
-	}
-	else if (Keyboard::isKeyPressed(Keyboard::Right))
-	{
-		// right arrow is pressed: move our ship right 5 pixels
-		ship.move(DISTANCE, 0);
-	}
-}
-
-
 
 int main()
 {
+	Ship ship;
+	ManyMissiles manyMissiles;
+	BackgroundUI backgroundUI;
+	ManyBombs manyBombs;
+	ManyEnemies manyEnemies;
+	int randomSecond;
+	bool start = true;
+	bool lost = false;
+	bool inGame = false;
+	float bombSpeed = 5.0;
+	float enemyMoveSpeed = 0.9;
+	FloatRect StartPos;
+	FloatRect clickBounds;
+	Vector2f mousePos;
 	const int WINDOW_WIDTH = 800;
 	const int WINDOW_HEIGHT = 600;
+	const int MIN_SECONDS = 60;
+	const int MAX_SECONDS = 180;
+	Level level = LEVEL_1;
 
 	RenderWindow window(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "aliens!");
 	// Limit the framerate to 60 frames per second
 	window.setFramerateLimit(60);
 
+	unsigned seed = time(0);
+	srand(seed);
+
 	// load textures from file into memory. This doesn't display anything yet.
 	// Notice we do this *before* going into animation loop.
-	Texture shipTexture;
-	if (!shipTexture.loadFromFile("ship.png"))
-	{
-		cout << "Unable to load ship texture!" << endl;
-		exit(EXIT_FAILURE);
-	}
-	Texture starsTexture;
-	if (!starsTexture.loadFromFile("stars.jpg"))
-	{
-		cout << "Unable to load stars texture!" << endl;
-		exit(EXIT_FAILURE);
-	}
-
-	// A sprite is a thing we can draw and manipulate on the screen.
-	// We have to give it a "texture" to specify what it looks like
-
-	Sprite background;
-	background.setTexture(starsTexture);
-	// The texture file is 640x480, so scale it up a little to cover 800x600 window
-	background.setScale(1.5, 1.5);
-
-	// create sprite and texture it
-	Sprite ship;
-	ship.setTexture(shipTexture);
-
+	
 
 	// initial position of the ship will be approx middle of screen
 	float shipX = window.getSize().x / 2.0f;
-	float shipY = window.getSize().y / 2.0f;
+	float shipY = 1000 / 2.0f;
 	ship.setPosition(shipX, shipY);
-
+	randomSecond = (rand() % (MAX_SECONDS - MIN_SECONDS + 1) + MIN_SECONDS);
 
 	while (window.isOpen())
 	{
-		// check all the window's events that were triggered since the last iteration of the loop
-		// For now, we just need this so we can click on the window and close it
 		Event event;
-
+		backgroundUI.drawBackground(window);
 		while (window.pollEvent(event))
 		{
-			// "close requested" event: we close the window
 			if (event.type == Event::Closed)
 				window.close();
-			else if (event.type == Event::KeyPressed)
+			else if (event.type == Event::KeyPressed && !start)
 			{
 				if (event.key.code == Keyboard::Space)
 				{
-					// handle space bar
+					Vector2f pos = ship.getPosition();
+					manyMissiles.addMissile(Vector2f(pos.x+10,pos.y-10));
 				}
 				
+				
 			}
+			else if (event.type == Event::MouseButtonPressed &&  Mouse::isButtonPressed(Mouse::Button::Left) && start) 
+			{
+				mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+				if (backgroundUI.startClicked(mousePos, StartPos)) // Clicked start button
+				{
+					start = false;
+					inGame = true;
+				}
+			}
+			
 		}
-
+		
+		
+		
+		
 		//===========================================================
 		// Everything from here to the end of the loop is where you put your
 		// code to produce ONE frame of the animation. The next iteration of the loop will
 		// render the next frame, and so on. All this happens ~ 60 times/second.
 		//===========================================================
+		
+		if (ship.getLives() == 0) // Ship destroyed, aliens win
+		{
+			lost = true;
+			clickBounds = backgroundUI.displayEndScreen(lost,window);
+			inGame = false;
+			if (event.type == Event::MouseButtonPressed &&  Mouse::isButtonPressed(Mouse::Button::Left))
+			{
+				mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+				if (backgroundUI.startClicked(mousePos, clickBounds)) // Restart clicked
+				{
+					lost = false;
+					inGame = true;
+					ship.setPosition(shipX,shipY);
+					ship.setLives(3);
+					level = LEVEL_1;
+					bombSpeed = 5.0;
+					enemyMoveSpeed = 0.9;
+					manyEnemies.setEnemies(10, level);
+					manyMissiles.clearMissiles();
+					manyBombs.clearBombs();
+					randomSecond = (rand() % (MAX_SECONDS - MIN_SECONDS + 1) + MIN_SECONDS);
+				}
+			}
+		}
+		else if (manyEnemies.getEnemiesLeft() == 0) //All enemies destroyed
+		{
+			if (level == LEVEL_1)
+			{
+				clickBounds = backgroundUI.displayEndScreen(lost, window);
+				inGame = false;
+				if (event.type == Event::MouseButtonPressed &&  Mouse::isButtonPressed(Mouse::Button::Left))
+				{
+					mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+					if (backgroundUI.startClicked(mousePos, clickBounds))
+					{
+						inGame = true;
+						ship.setPosition(shipX, shipY);
+						ship.setLives(3);
+						level = LEVEL_2;
+						bombSpeed = 10.0;
+						enemyMoveSpeed = 1.9;
+						manyEnemies.setNewLevel(level);
+						manyMissiles.clearMissiles();
+						manyBombs.clearBombs();
+					}
+				}
+			}
+			else if (level == LEVEL_2)
+			{
+				inGame = false;
+				clickBounds = backgroundUI.displayFinalScreen(window);
+				if (event.type == Event::MouseButtonPressed &&  Mouse::isButtonPressed(Mouse::Button::Left))
+				{
+					mousePos = window.mapPixelToCoords(Mouse::getPosition(window));
+					if (backgroundUI.startClicked(mousePos, clickBounds))
+					{
+						window.close();
+					}
+				}
+			}
+			
+			
+		}
 
-		// draw background first, so everything that's drawn later 
-		// will appear on top of background
-		window.draw(background);
+		if (randomSecond == 0 && inGame)
+		{
+			Vector2f enemyPosition = manyEnemies.returnRandomEnemy();
+			manyBombs.addBomb(Vector2f(enemyPosition.x,enemyPosition.y+30));
+			randomSecond = (rand() % (MAX_SECONDS - MIN_SECONDS + 1) + MIN_SECONDS);
 
-		moveShip(ship);
+		}
+		else
+		{
+			randomSecond--;
+		}
 
-		// draw the ship on top of background 
-		// (the ship from previous frame was erased when we drew background)
-		window.draw(ship);
+		if (inGame)
+		{
+			
+			
+			
+			if (manyEnemies.checkY()) // Enemies reach ship
+			{
+				ship.decrementLives();
+				manyEnemies.resetEnemies();
+			}
 
+			manyMissiles.moveMissiles();
+			ship.moveShip();
+			manyBombs.moveBombs(bombSpeed);
+			manyEnemies.moveEnemies(enemyMoveSpeed);
+			manyMissiles.deleteMissile(manyEnemies.returnList());
+			manyBombs.deleteBomb(ship, manyEnemies);
+			ship.drawShip(window);
+			manyEnemies.drawEnemies(window);
+			backgroundUI.displayLives(window, ship);
+			backgroundUI.displayEnemiesLeft(window, manyEnemies);
+			manyBombs.drawBombs(window);
+			manyMissiles.drawMissiles(window);
+
+		}
+		else if (start)
+		{
+			StartPos = backgroundUI.displayMenu(window);
+		}
+		
 
 		// end the current frame; this makes everything that we have 
 		// already "drawn" actually show up on the screen
